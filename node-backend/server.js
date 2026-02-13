@@ -43,4 +43,4 @@ app.post("/render", upload.fields([
     .on("end", () => res.sendFile(path.resolve(output)));
 });
 
-app.listen(3000, () => console.log("Server running"));
+app.listen(3000, "0.0.0.0", () => console.log("Server running on network"));

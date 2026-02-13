@@ -1,0 +1,19 @@
+# node
+node_modules/
+
+# uploads (временные файлы)
+node-backend/uploads/
+
+# outputs (сгенерированные видео)
+node-backend/outputs/
+node-backend/*.mp4
+
+# logs
+*.log
+
+# system
+.DS_Store
+Thumbs.db
+
+# env
+.env
