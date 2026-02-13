@@ -1,0 +1,19 @@
+body {
+    font-family: Arial;
+    padding: 20px;
+    background: #0f0f0f;
+    color: white;
+}
+
+button {
+    padding: 12px;
+    margin: 5px;
+    border: none;
+    background: #2ea6ff;
+    color: white;
+    border-radius: 8px;
+}
+
+.bg-list {
+    margin: 10px 0;
+}
