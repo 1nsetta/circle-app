@@ -4,108 +4,109 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Circle Studio</title>
-
-  <!-- подключаем внешний CSS -->
-  <link rel="stylesheet" href="./styles.css?v=2">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 
 <body>
-
 <div class="app">
   <div class="card">
     <h1>Circle Studio</h1>
-    <div class="subtitle">Сделай видео-кружок за несколько секунд</div>
+    <div class="subtitle">Создай Telegram-кружок</div>
 
+    <!-- загрузка основного видео -->
     <input type="file" id="videoInput" class="file" accept="video/*">
-    <button id="renderBtn">Создать кружок</button>
+
+    <!-- выбор фона -->
+    <h2>Выберите фон</h2>
+
+    <div class="bg-selector">
+      <div class="bg-card active" data-bg="bg.mp4">
+        <video src="http://localhost:3000/backgrounds/bg.mp4" muted loop autoplay></video>
+        <span>Gameplay</span>
+      </div>
+
+      <div class="bg-card" data-bg="gradient.mp4">
+        <video src="http://localhost:3000/backgrounds/gradient.mp4" muted loop autoplay></video>
+        <span>Gradient</span>
+      </div>
+
+      <div class="bg-card custom" data-bg="custom">
+        <div class="upload-box">
+          + Свой фон
+          <input type="file" id="customBg" accept="video/*">
+        </div>
+      </div>
+    </div>
+
+    <button id="renderBtn">Создать</button>
 
     <div id="result"></div>
   </div>
 </div>
 
-<!-- Overlay генерации -->
+<!-- overlay -->
 <div id="processingOverlay" class="overlay hidden">
   <div class="overlay-box">
     <div class="spinner"></div>
-    <div class="overlay-text">Генерируем видео…</div>
-    <div class="overlay-sub">Это займёт несколько секунд</div>
+    <div>Генерируем видео…</div>
   </div>
 </div>
 
 <script>
-const input = document.getElementById("videoInput");
-const btn = document.getElementById("renderBtn");
-const result = document.getElementById("result");
+let selectedBg = "bg.mp4";
+let customBgFile = null;
+
 const overlay = document.getElementById("processingOverlay");
 
-btn.onclick = async () => {
-  if (!input.files.length) {
-    alert("Выбери видео");
-    return;
-  }
+// выбор карточки
+document.querySelectorAll(".bg-card").forEach(card => {
+  card.addEventListener("click", () => {
+    document.querySelectorAll(".bg-card").forEach(c => c.classList.remove("active"));
+    card.classList.add("active");
+    selectedBg = card.dataset.bg;
+  });
+});
+
+// загрузка своего фона
+document.getElementById("customBg").addEventListener("change", e => {
+  customBgFile = e.target.files[0];
+  selectedBg = "custom";
+});
+
+document.getElementById("renderBtn").onclick = async () => {
+  const videoFile = document.getElementById("videoInput").files[0];
+  if (!videoFile) return alert("Загрузи видео");
 
   overlay.classList.remove("hidden");
-  btn.disabled = true;
 
   const formData = new FormData();
-  formData.append("video", input.files[0]);
+  formData.append("video", videoFile);
 
-  try {
-    const response = await fetch("http://localhost:3000/render", {
-      method: "POST",
-      body: formData
-    });
-
-    // ✔ проверяем что сервер реально ответил успешно
-    if (!response.ok) {
-      throw new Error("HTTP error " + response.status);
-    }
-
-    // ✔ получаем готовый mp4
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const video = document.createElement("video");
-    video.className = "circle-video";
-
-    // ✔ ждём когда браузер реально подготовит видео
-    video.addEventListener("loadedmetadata", () => {
-      showCircle(video);
-      overlay.classList.add("hidden");
-      btn.disabled = false;
-    });
-
-    video.addEventListener("error", () => {
-      console.error("Video load error");
-      overlay.classList.add("hidden");
-      btn.disabled = false;
-    });
-
-    video.src = url;
-    video.controls = true;
-    video.autoplay = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.load();
-
-  } catch (err) {
-    console.error("REAL ERROR:", err);
-    alert("Ошибка генерации");
-    overlay.classList.add("hidden");
-    btn.disabled = false;
+  if (selectedBg === "custom") {
+    formData.append("background", customBgFile);
+  } else {
+    formData.append("bgName", selectedBg);
   }
+
+  const response = await fetch("http://localhost:3000/render", {
+    method: "POST",
+    body: formData
+  });
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  const video = document.createElement("video");
+  video.src = url;
+  video.controls = true;
+  video.className = "circle-video";
+
+  video.onloadedmetadata = () => {
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("result").appendChild(video);
+    overlay.classList.add("hidden");
+  };
 };
-
-function showCircle(videoElement) {
-  result.innerHTML = "";
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "circle-wrapper";
-
-  wrapper.appendChild(videoElement);
-  result.appendChild(wrapper);
-}
 </script>
-
 </body>
 </html>
