@@ -23,9 +23,7 @@ app.get("/", (req, res) => {
 
 // Основной рендер
 app.post("/render", upload.single("video"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send("No file uploaded");
-  }
+  if (!req.file) return res.status(400).send("No file uploaded");
 
   const input = path.resolve(req.file.path);
   const background = path.resolve(backgroundsDir, "bg.mp4");
@@ -40,28 +38,21 @@ app.post("/render", upload.single("video"), (req, res) => {
     return res.status(500).send("Background bg.mp4 not found");
   }
 
+  // ВАЖНО: фильтр одной строкой!
+  const filter =
+    "[0:v]scale=1080:1920[bg];" +
+    "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=600:600[vid];" +
+    "[vid]format=rgba," +
+    "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
+    "a='if(lte((X-300)*(X-300)+(Y-300)*(Y-300),300*300),255,0)'[circle];" +
+    "[bg][circle]overlay=(W-w)/2:(H-h)/2";
+
   ffmpeg()
     .input(background)
     .input(input)
-    .complexFilter([
-      // Фон → вертикальный
-      "[0:v]scale=1080:1920[bg];",
-
-      // Видео → квадрат (центр)
-      "[1:v]crop='min(in_w,in_h)':'min(in_w,in_h)',scale=600:600[vid];",
-
-      // Создаём круглую маску через альфа-канал
-      "[vid]format=rgba,geq=" +
-        "r='r(X,Y)':" +
-        "g='g(X,Y)':" +
-        "b='b(X,Y)':" +
-        "a='if(lte((X-300)*(X-300)+(Y-300)*(Y-300),300*300),255,0)'[circle];",
-
-      // Кладём круг по центру
-      "[bg][circle]overlay=(W-w)/2:(H-h)/2"
-    ])
+    .complexFilter(filter)
     .outputOptions([
-      "-map 1:a?",          // берём звук из исходного видео (если есть)
+      "-map 1:a?",        // берём звук из оригинала если есть
       "-c:v libx264",
       "-preset veryfast",
       "-crf 23",
@@ -74,7 +65,7 @@ app.post("/render", upload.single("video"), (req, res) => {
       res.download(output);
     })
     .on("error", err => {
-      console.error("❌ ERROR:", err);
+      console.error("❌ ERROR:", err.message);
       res.status(500).send("Render error");
     })
     .output(output)
