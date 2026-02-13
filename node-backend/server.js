@@ -17,7 +17,7 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(backgroundsDir)) fs.mkdirSync(backgroundsDir);
 
 app.get("/", (req, res) => {
-  res.send("✅ Simple Render Server Running");
+  res.send("✅ Circle Render Server Running");
 });
 
 app.post("/render", upload.single("video"), (req, res) => {
@@ -32,16 +32,22 @@ app.post("/render", upload.single("video"), (req, res) => {
   ffmpeg()
     .input(background)
     .input(input)
-    .complexFilter([
-      // делаем вертикальный фон
-      "[0:v]scale=1080:1920[bg]",
+    .complexFilter(
+      "[0:v]scale=1080:1920[bg];" +
 
-      // просто квадратное видео по центру (без круга!)
-      "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=680:680[fg]",
+      // делаем квадратное видео
+      "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=680:680[vid];" +
+
+      // ВЫРЕЗАЕМ КРУГ (тот самый рабочий способ)
+      "[vid]format=rgba,geq=" +
+      "r='r(X,Y)':" +
+      "g='g(X,Y)':" +
+      "b='b(X,Y)':" +
+      "a='if(lte((X-340)*(X-340)+(Y-340)*(Y-340),340*340),255,0)'[circle];" +
 
       // накладываем по центру
-      "[bg][fg]overlay=(W-w)/2:(H-h)/2"
-    ])
+      "[bg][circle]overlay=(W-w)/2:(H-h)/2"
+    )
     .outputOptions([
       "-map 1:a?",
       "-c:v libx264",
