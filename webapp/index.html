@@ -2,111 +2,51 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Circle Studio</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+
 <div class="app">
-  <div class="card">
-    <h1>Circle Studio</h1>
-    <div class="subtitle">Создай Telegram-кружок</div>
+  <h1>Circle Studio</h1>
+  <p class="subtitle">Создай Telegram-кружок</p>
 
-    <!-- загрузка основного видео -->
-    <input type="file" id="videoInput" class="file" accept="video/*">
+  <!-- Загрузка видео -->
+  <label class="file-input">
+    <input type="file" id="videoInput" accept="video/*">
+    <span>Выберите видео</span>
+  </label>
 
-    <!-- выбор фона -->
-    <h2>Выберите фон</h2>
+  <!-- Выбор фона -->
+  <h3>Выберите фон</h3>
 
-    <div class="bg-selector">
-      <div class="bg-card active" data-bg="bg.mp4">
-        <video src="http://localhost:3000/backgrounds/bg.mp4" muted loop autoplay></video>
-        <span>Gameplay</span>
+  <div class="bg-list">
+    <div class="bg-card" onclick="selectBackground('bg.mp4')">
+      <div class="bg-preview">
+        <video src="http://localhost:3000/backgrounds/bg.mp4"
+               muted autoplay loop playsinline></video>
       </div>
-
-      <div class="bg-card" data-bg="gradient.mp4">
-        <video src="http://localhost:3000/backgrounds/gradient.mp4" muted loop autoplay></video>
-        <span>Gradient</span>
-      </div>
-
-      <div class="bg-card custom" data-bg="custom">
-        <div class="upload-box">
-          + Свой фон
-          <input type="file" id="customBg" accept="video/*">
-        </div>
-      </div>
+      <span>Default</span>
     </div>
-
-    <button id="renderBtn">Создать</button>
-
-    <div id="result"></div>
   </div>
+
+  <!-- Кнопка -->
+  <button id="renderBtn" onclick="renderVideo()">Создать кружок</button>
+
+  <!-- Статус -->
+  <div id="status" class="status hidden">
+    <div class="loader"></div>
+    <p>Генерируем видео…</p>
+  </div>
+
+  <!-- Результат -->
+  <div id="result" class="result hidden">
+    <video id="resultVideo" controls></video>
+    <a id="downloadLink">Скачать</a>
+  </div>
+
 </div>
 
-<!-- overlay -->
-<div id="processingOverlay" class="overlay hidden">
-  <div class="overlay-box">
-    <div class="spinner"></div>
-    <div>Генерируем видео…</div>
-  </div>
-</div>
-
-<script>
-let selectedBg = "bg.mp4";
-let customBgFile = null;
-
-const overlay = document.getElementById("processingOverlay");
-
-// выбор карточки
-document.querySelectorAll(".bg-card").forEach(card => {
-  card.addEventListener("click", () => {
-    document.querySelectorAll(".bg-card").forEach(c => c.classList.remove("active"));
-    card.classList.add("active");
-    selectedBg = card.dataset.bg;
-  });
-});
-
-// загрузка своего фона
-document.getElementById("customBg").addEventListener("change", e => {
-  customBgFile = e.target.files[0];
-  selectedBg = "custom";
-});
-
-document.getElementById("renderBtn").onclick = async () => {
-  const videoFile = document.getElementById("videoInput").files[0];
-  if (!videoFile) return alert("Загрузи видео");
-
-  overlay.classList.remove("hidden");
-
-  const formData = new FormData();
-  formData.append("video", videoFile);
-
-  if (selectedBg === "custom") {
-    formData.append("background", customBgFile);
-  } else {
-    formData.append("bgName", selectedBg);
-  }
-
-  const response = await fetch("http://localhost:3000/render", {
-    method: "POST",
-    body: formData
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-
-  const video = document.createElement("video");
-  video.src = url;
-  video.controls = true;
-  video.className = "circle-video";
-
-  video.onloadedmetadata = () => {
-    document.getElementById("result").innerHTML = "";
-    document.getElementById("result").appendChild(video);
-    overlay.classList.add("hidden");
-  };
-};
-</script>
+<script src="app.js"></script>
 </body>
 </html>
