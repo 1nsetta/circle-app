@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circle Studio</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circle Studio</title>
 
-<link rel="stylesheet" href="styles.css">
+  <!-- подключаем внешний CSS -->
+  <link rel="stylesheet" href="./styles.css?v=2">
 </head>
 
 <body>
@@ -27,7 +28,7 @@
   <div class="overlay-box">
     <div class="spinner"></div>
     <div class="overlay-text">Генерируем видео…</div>
-    <div class="overlay-sub">Не закрывай страницу</div>
+    <div class="overlay-sub">Это займёт несколько секунд</div>
   </div>
 </div>
 
@@ -55,24 +56,27 @@ btn.onclick = async () => {
       body: formData
     });
 
-    // Ждём пока файл реально полностью загрузится
-    const buffer = await response.arrayBuffer();
-    const blob = new Blob([buffer], { type: "video/mp4" });
+    // ✔ проверяем что сервер реально ответил успешно
+    if (!response.ok) {
+      throw new Error("HTTP error " + response.status);
+    }
+
+    // ✔ получаем готовый mp4
+    const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
     const video = document.createElement("video");
     video.className = "circle-video";
 
-    // 👇 Это событие приходит ВСЕГДА когда файл реально готов
+    // ✔ ждём когда браузер реально подготовит видео
     video.addEventListener("loadedmetadata", () => {
       showCircle(video);
       overlay.classList.add("hidden");
       btn.disabled = false;
     });
 
-    // если вдруг ошибка загрузки
     video.addEventListener("error", () => {
-      alert("Ошибка загрузки видео");
+      console.error("Video load error");
       overlay.classList.add("hidden");
       btn.disabled = false;
     });
@@ -82,20 +86,10 @@ btn.onclick = async () => {
     video.autoplay = true;
     video.loop = true;
     video.playsInline = true;
-
     video.load();
 
-    // 🛟 fallback если браузер тупит
-    setTimeout(() => {
-      if (video.readyState === 0) {
-        showCircle(video);
-        overlay.classList.add("hidden");
-        btn.disabled = false;
-      }
-    }, 5000);
-
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error("REAL ERROR:", err);
     alert("Ошибка генерации");
     overlay.classList.add("hidden");
     btn.disabled = false;
