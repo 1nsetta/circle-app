@@ -6,115 +6,41 @@ const fs = require("fs");
 const cors = require("cors");
 
 const app = express();
-const PORT = 3000;
+app.use(cors());
+app.use("/backgrounds", express.static(path.join(__dirname, "backgrounds")));
 
-// ✅ Разрешаем запросы с Live Server / браузера
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"]
-}));
+const upload = multer({ dest: "uploads/" });
 
-// 👉 Папки
-const uploadsDir = path.join(__dirname, "uploads");
-const outputDir = path.join(__dirname, "outputs");
-const bgDir = path.join(__dirname, "backgrounds");
+app.post("/render", upload.fields([
+  { name: "video", maxCount: 1 },
+  { name: "background", maxCount: 1 }
+]), (req, res) => {
 
-// создаём если нет
-[uploadsDir, outputDir].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-});
+  const videoPath = req.files.video[0].path;
 
-// отдаём готовые видео
-app.use("/outputs", express.static(outputDir));
-
-// 👉 настройка загрузки файлов
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    const unique = Date.now() + path.extname(file.originalname);
-    cb(null, unique);
+  let bgPath;
+  if (req.files.background) {
+    bgPath = req.files.background[0].path;
+  } else {
+    bgPath = path.join(__dirname, "backgrounds", req.body.bgName || "bg.mp4");
   }
+
+  const output = `output_${Date.now()}.mp4`;
+
+  ffmpeg()
+    .input(bgPath)
+    .input(videoPath)
+    .complexFilter(
+      "[0:v]scale=1080:1920[bg];" +
+      "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=700:700[vid];" +
+      "[vid]format=rgba,geq=" +
+      "r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
+      "a='if(lte((X-350)*(X-350)+(Y-350)*(Y-350),350*350),255,0)'[circle];" +
+      "[bg][circle]overlay=(W-w)/2:(H-h)/2"
+    )
+    .outputOptions(["-map 1:a?", "-shortest"])
+    .save(output)
+    .on("end", () => res.sendFile(path.resolve(output)));
 });
 
-const upload = multer({ storage });
-
-// =====================================================
-// 🎬 РЕНДЕР ВИДЕО-КРУЖКА
-// =====================================================
-app.post("/render", upload.single("video"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Файл не получен" });
-    }
-
-    const inputVideo = req.file.path;
-    const backgroundVideo = path.join(bgDir, "bg.mp4"); // фон
-    const outputName = `output_${Date.now()}.mp4`;
-    const outputPath = path.join(outputDir, outputName);
-
-    console.log("START RENDER");
-    console.log("INPUT:", inputVideo);
-    console.log("BG:", backgroundVideo);
-    console.log("OUTPUT:", outputPath);
-
-    // 🎯 Размер кружка
-    const circleSize = 680;
-    const radius = circleSize / 2;
-
-    ffmpeg()
-      .input(backgroundVideo)
-      .input(inputVideo)
-      .complexFilter([
-        // фон → вертикальный 1080x1920
-        `[0:v]scale=1080:1920[bg]`,
-
-        // видео → квадрат + размер кружка
-        `[1:v]crop='min(in_w,in_h)':'min(in_w,in_h)',scale=${circleSize}:${circleSize}[vid]`,
-
-        // делаем альфа-маску круга
-        `[vid]format=rgba,geq=
-        r='r(X,Y)':
-        g='g(X,Y)':
-        b='b(X,Y)':
-        a='if(lte((X-${radius})*(X-${radius})+(Y-${radius})*(Y-${radius}),${radius}*${radius}),255,0)'
-        [circle]`,
-
-        // накладываем по центру
-        `[bg][circle]overlay=(W-w)/2:(H-h)/2`
-      ])
-      .outputOptions([
-        "-map 1:a?",          // если есть звук — оставить
-        "-c:v libx264",
-        "-preset veryfast",
-        "-crf 23",
-        "-pix_fmt yuv420p",
-        "-shortest"
-      ])
-      .on("end", () => {
-        console.log("✅ DONE");
-
-        res.json({
-          success: true,
-          url: `http://localhost:${PORT}/outputs/${outputName}`
-        });
-
-        // можно удалить исходник
-        fs.unlink(inputVideo, () => {});
-      })
-      .on("error", (err) => {
-        console.error("❌ ERROR:", err.message);
-        res.status(500).json({ error: "FFmpeg error" });
-      })
-      .save(outputPath);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// =====================================================
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server started on http://localhost:${PORT}`);
-});
+app.listen(3000, () => console.log("Server running"));
