@@ -1,54 +1,98 @@
-let selectedBg = "bg.mp4";
+// ===== АДРЕС ТВОЕГО СЕРВЕРА =====
+// ОБЯЗАТЕЛЬНО укажи свой IP (тот что 192.168.0.8)
+const SERVER = "http://192.168.0.8:3000";
 
-const slides = document.querySelectorAll(".slide");
-const carousel = document.getElementById("bgCarousel");
 
-/* Определяем активный слайд при свайпе */
+// ===== ЭЛЕМЕНТЫ UI =====
+const form = document.getElementById("uploadForm");
+const fileInput = document.getElementById("videoInput");
+const statusBlock = document.getElementById("status");
+const bgContainer = document.getElementById("bgCarousel");
 
-carousel.addEventListener("scroll", () => {
-  let closest = null;
-  let closestOffset = Infinity;
 
-  slides.forEach(slide => {
-    const rect = slide.getBoundingClientRect();
-    const offset = Math.abs(rect.left + rect.width/2 - window.innerWidth/2);
+// ===== СПИСОК ФОНОВ =====
+const backgrounds = [
+  "bg.mp4",
+  "gameplay.mp4",
+  "podcast.mp4"
+];
 
-    if (offset < closestOffset) {
-      closestOffset = offset;
-      closest = slide;
-    }
-  });
+let selectedBg = backgrounds[0];
 
-  slides.forEach(s => s.classList.remove("active"));
-  if (closest) {
-    closest.classList.add("active");
-    selectedBg = closest.dataset.bg;
-  }
+
+// ===== СОЗДАЁМ КАРУСЕЛЬ ФОНОВ =====
+backgrounds.forEach((bg, index) => {
+  const video = document.createElement("video");
+
+  video.src = `${SERVER}/backgrounds/${bg}`;
+  video.autoplay = true;
+  video.loop = true;
+  video.muted = true;
+  video.playsInline = true;
+
+  video.className = "bg-preview";
+  if (index === 0) video.classList.add("active");
+
+  video.onclick = () => selectBackground(video, bg);
+
+  bgContainer.appendChild(video);
 });
 
-/* РЕНДЕР */
+function selectBackground(videoEl, bgName) {
+  document.querySelectorAll(".bg-preview").forEach(v => v.classList.remove("active"));
+  videoEl.classList.add("active");
+  selectedBg = bgName;
+}
 
-document.getElementById("renderBtn").onclick = async () => {
-  const file = document.getElementById("videoInput").files[0];
-  if (!file) return alert("Выбери видео");
 
-  document.getElementById("status").classList.remove("hidden");
+// ===== ОБРАБОТКА ОТПРАВКИ ФОРМЫ =====
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const file = fileInput.files[0];
+  if (!file) {
+    showStatus("❌ Выберите видео");
+    return;
+  }
+
+  showStatus("⏳ Генерируем видео... Это займёт несколько секунд");
 
   const formData = new FormData();
   formData.append("video", file);
-  formData.append("bgName", selectedBg);
+  formData.append("background", selectedBg);
 
-  const response = await fetch("http://localhost:3000/render", {
-    method: "POST",
-    body: formData
-  });
+  try {
+    const response = await fetch(`${SERVER}/render`, {
+      method: "POST",
+      body: formData
+    });
 
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
+    if (!response.ok) throw new Error("Render failed");
 
-  const video = document.getElementById("resultVideo");
-  video.src = url;
-  video.classList.remove("hidden");
+    const blob = await response.blob();
 
-  document.getElementById("status").classList.add("hidden");
-};
+    // ===== СКАЧИВАЕМ ФАЙЛ =====
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "circle-video.mp4";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+
+    showStatus("✅ Видео готово!");
+
+  } catch (err) {
+    console.error(err);
+    showStatus("❌ Ошибка генерации");
+  }
+});
+
+
+// ===== UI СТАТУС =====
+function showStatus(text) {
+  statusBlock.innerText = text;
+  statusBlock.style.opacity = 1;
+}
