@@ -1,26 +1,8 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Circle Video</title>
-        <link rel="stylesheet" 
-        href="style.css">
-    </head>
-    <body>
+<link rel="stylesheet" href="player.css" />
 
-        <h>Создать видео</h>
-        <input type="file" id="videoInput"
-        accept="video/*">
-        <h3>Выбери фон</h3>
+<script type="module">
+import { createCirclePlayer } from "./player.js";
 
-        <div class="bg-list">
-            <button onclick="selectBg('abstract.mp4')">Abstract</button>
-            <button onclick="selectBg('gameplay.mp4')">Gameplay</button>
-            <button onclick="selectBg('podcast.mp4')">Podcast</button>
-        </div>
-        <button id="renderBtn">Создать</button>
-        <p id="status"></p>
-       <!-- <script src="https://telegram.org/js/telegram-web-app.js"></script>-->
-        <script src="./app.js" defer></script>
-    </body>
-</html>
+const player = createCirclePlayer("output.mp4"); // твой файл
+document.body.appendChild(player);
+</script>
