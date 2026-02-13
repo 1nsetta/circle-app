@@ -5,9 +5,6 @@ const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
 const fs = require("fs");
 const path = require("path");
 
-// подключаем модуль эффекта
-const { buildCircleFilter } = require("./circleEffect");
-
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
@@ -19,12 +16,10 @@ const backgroundsDir = path.resolve(__dirname, "backgrounds");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(backgroundsDir)) fs.mkdirSync(backgroundsDir);
 
-// Проверка сервера
 app.get("/", (req, res) => {
-  res.send("✅ Circle Animation Server Running");
+  res.send("✅ Simple Render Server Running");
 });
 
-// Рендер
 app.post("/render", upload.single("video"), (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
@@ -33,43 +28,39 @@ app.post("/render", upload.single("video"), (req, res) => {
   const output = path.resolve(__dirname, `output_${Date.now()}.mp4`);
 
   console.log("🎬 START RENDER");
-  console.log("INPUT:", input);
-  console.log("BG:", background);
-  console.log("OUTPUT:", output);
-
-  if (!fs.existsSync(background)) {
-    return res.status(500).send("Background bg.mp4 not found");
-  }
-
-  // получаем фильтр из отдельного файла
-  const filter = buildCircleFilter(680); // размер круга регулируется тут
 
   ffmpeg()
     .input(background)
     .input(input)
-    .complexFilter(filter)
+    .complexFilter([
+      // делаем вертикальный фон
+      "[0:v]scale=1080:1920[bg]",
+
+      // просто квадратное видео по центру (без круга!)
+      "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=680:680[fg]",
+
+      // накладываем по центру
+      "[bg][fg]overlay=(W-w)/2:(H-h)/2"
+    ])
     .outputOptions([
-      "-map 1:a?",        // звук из оригинального видео
+      "-map 1:a?",
       "-c:v libx264",
       "-preset veryfast",
       "-crf 23",
       "-pix_fmt yuv420p",
       "-shortest"
     ])
-    .on("start", cmd => console.log("FFmpeg:", cmd))
     .on("end", () => {
-      console.log("✅ RENDER DONE");
+      console.log("✅ DONE");
       res.download(output);
     })
     .on("error", err => {
       console.error("❌ ERROR:", err.message);
       res.status(500).send("Render error");
     })
-    .output(output)
-    .run();
+    .save(output);
 });
 
-// Запуск сервера
 app.listen(3000, () => {
   console.log("🚀 Server started on http://localhost:3000");
 });
