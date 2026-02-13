@@ -4,6 +4,8 @@ const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
 const fs = require("fs");
 const path = require("path");
+
+// подключаем модуль эффекта
 const { buildCircleFilter } = require("./circleEffect");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -19,10 +21,10 @@ if (!fs.existsSync(backgroundsDir)) fs.mkdirSync(backgroundsDir);
 
 // Проверка сервера
 app.get("/", (req, res) => {
-  res.send("✅ Circle Render Server Running");
+  res.send("✅ Circle Animation Server Running");
 });
 
-// Основной рендер
+// Рендер
 app.post("/render", upload.single("video"), (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
@@ -39,21 +41,15 @@ app.post("/render", upload.single("video"), (req, res) => {
     return res.status(500).send("Background bg.mp4 not found");
   }
 
-  // ВАЖНО: фильтр одной строкой!
-  const filter =
-    "[0:v]scale=1080:1920[bg];" +
-    "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=600:600[vid];" +
-    "[vid]format=rgba," +
-    "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
-    "a='if(lte((X-300)*(X-300)+(Y-300)*(Y-300),300*300),255,0)'[circle];" +
-    "[bg][circle]overlay=(W-w)/2:(H-h)/2";
+  // получаем фильтр из отдельного файла
+  const filter = buildCircleFilter(680); // размер круга регулируется тут
 
   ffmpeg()
     .input(background)
     .input(input)
     .complexFilter(filter)
     .outputOptions([
-      "-map 1:a?",        // берём звук из оригинала если есть
+      "-map 1:a?",        // звук из оригинального видео
       "-c:v libx264",
       "-preset veryfast",
       "-crf 23",
