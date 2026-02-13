@@ -5,63 +5,71 @@ const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
 const fs = require("fs");
 const path = require("path");
 
-// говорим fluent-ffmpeg где лежит ffmpeg (локальный!)
+// используем локальный ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
-
-// папка для загрузок
 const upload = multer({ dest: "uploads/" });
 
-// убедимся что папка есть
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
+// создаём папки если их нет
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync("backgrounds")) fs.mkdirSync("backgrounds");
 
-// тестовый маршрут
+// проверка сервера
 app.get("/", (req, res) => {
-  res.send("✅ Video render server is running");
+  res.send("✅ Render server working");
 });
 
 // основной рендер
 app.post("/render", upload.single("video"), (req, res) => {
   if (!req.file) {
-    console.log("❌ No file uploaded");
     return res.status(400).send("No file uploaded");
   }
 
   const input = req.file.path;
-  const output = path.join(__dirname, output_${Date.now()}.mp4);
+  const background = path.join(__dirname, "backgrounds", "bg.mp4");
+  const output = path.join(__dirname, `output_${Date.now()}.mp4`);
 
-  console.log("🎬 Start render:", input);
+  console.log("🎬 Rendering...");
+  console.log("Input:", input);
+  console.log("Background:", background);
 
-  ffmpeg(input)
+  ffmpeg()
+    .input(background)
+    .input(input)
+    .complexFilter([
+      // делаем фон вертикальным
+      "[0:v]scale=1080:1920[bg]",
+
+      // масштабируем пользовательское видео
+      "[1:v]scale=600:-1[fg]",
+
+      // кладём видео в центр
+      "[bg][fg]overlay=(W-w)/2:(H-h)/2"
+    ])
     .outputOptions([
-      "-vf scale=512:512", // пока просто масштаб
-      "-t 10"              // первые 10 секунд
+      "-map 1:a?",
+      "-c:v libx264",
+      "-preset veryfast",
+      "-crf 23",
+      "-shortest"
     ])
     .on("end", () => {
-      console.log("✅ Render done");
+      console.log("✅ Done");
 
       res.download(output, () => {
-        // чистим файлы после отправки
-        fs.unlinkSync(input);
-        fs.unlinkSync(output);
+        if (fs.existsSync(input)) fs.unlinkSync(input);
+        if (fs.existsSync(output)) fs.unlinkSync(output);
       });
     })
     .on("error", (err) => {
-      console.error("🔥 FFmpeg error:", err);
-
-      if (fs.existsSync(input)) fs.unlinkSync(input);
-      if (fs.existsSync(output)) fs.unlinkSync(output);
-
+      console.error("❌ FFmpeg error:", err);
       res.status(500).send("Render error");
     })
     .save(output);
 });
 
-// запуск сервера
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(🚀 Server started on http://localhost:${PORT});
+// запуск
+app.listen(3000, () => {
+  console.log("🚀 Server started on http://localhost:3000");
 });
