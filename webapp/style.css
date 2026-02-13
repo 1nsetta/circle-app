@@ -1,93 +1,94 @@
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #1e3c72, #0f2027);
   font-family: system-ui;
+  background: #0f172a;
   color: white;
 }
 
 .app {
-  width: 360px;
-  margin: 40px auto;
-  padding: 24px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 20px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  max-width: 420px;
+  margin: auto;
+  padding: 20px;
 }
 
-h1 {
-  margin: 0 0 6px;
-}
-
-.subtitle {
-  opacity: 0.6;
+.file {
+  width: 100%;
   margin-bottom: 20px;
 }
 
-.file-input {
-  display: block;
-  padding: 14px;
-  border: 2px dashed rgba(255,255,255,0.2);
-  border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  margin-bottom: 20px;
+/* КАРУСЕЛЬ */
+
+.carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 16px;
+  padding-bottom: 10px;
 }
 
-.file-input input {
+.carousel::-webkit-scrollbar {
   display: none;
 }
 
-.bg-list {
-  display: flex;
-  gap: 10px;
-}
-
-.bg-card {
-  cursor: pointer;
-  width: 100%;
-}
-
-.bg-preview {
-  width: 100%;
-  height: 120px;
-  border-radius: 14px;
+.slide {
+  flex: 0 0 80%;
+  scroll-snap-align: center;
+  border-radius: 16px;
   overflow: hidden;
-  background: #111;
+  position: relative;
+  border: 3px solid transparent;
+  transition: 0.3s;
 }
 
-.bg-preview video {
+.slide video {
   width: 100%;
-  height: 100%;
+  height: 240px;
   object-fit: cover;
 }
 
+.slide span {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  background: rgba(0,0,0,0.6);
+  font-size: 14px;
+}
+
+.slide.active {
+  border: 3px solid #22d3ee;
+  transform: scale(1.02);
+}
+
+/* КНОПКА */
+
 button {
-  margin-top: 20px;
   width: 100%;
+  margin-top: 20px;
   padding: 14px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(90deg,#00c6ff,#0072ff);
+  background: linear-gradient(90deg,#06b6d4,#3b82f6);
   color: white;
   font-size: 16px;
   cursor: pointer;
 }
+
+/* STATUS */
 
 .status {
   text-align: center;
   margin-top: 20px;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 .loader {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255,255,255,0.2);
-  border-top: 3px solid white;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #444;
+  border-top: 3px solid #22d3ee;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: auto;
@@ -98,17 +99,7 @@ button {
 }
 
 .result {
-  margin-top: 20px;
-}
-
-.result video {
   width: 100%;
+  margin-top: 20px;
   border-radius: 12px;
-}
-
-.result a {
-  display: block;
-  margin-top: 10px;
-  text-align: center;
-  color: #00c6ff;
 }
