@@ -34,18 +34,10 @@ app.post("/render", upload.single("video"), (req, res) => {
     .input(input)
     .complexFilter(
       "[0:v]scale=1080:1920[bg];" +
-
-      // делаем квадратное видео
       "[1:v]crop=min(in_w\\,in_h):min(in_w\\,in_h),scale=680:680[vid];" +
-
-      // ВЫРЕЗАЕМ КРУГ (тот самый рабочий способ)
       "[vid]format=rgba,geq=" +
-      "r='r(X,Y)':" +
-      "g='g(X,Y)':" +
-      "b='b(X,Y)':" +
+      "r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
       "a='if(lte((X-340)*(X-340)+(Y-340)*(Y-340),340*340),255,0)'[circle];" +
-
-      // накладываем по центру
       "[bg][circle]overlay=(W-w)/2:(H-h)/2"
     )
     .outputOptions([
