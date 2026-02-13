@@ -4,6 +4,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
 const fs = require("fs");
 const path = require("path");
+const { buildCircleFilter } = require("./circleEffect");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
