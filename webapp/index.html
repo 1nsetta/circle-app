@@ -9,42 +9,42 @@
 
 <div class="app">
   <h1>Circle Studio</h1>
-  <p class="subtitle">Создай Telegram-кружок</p>
+  <p class="subtitle">Выбери фон свайпом</p>
 
-  <!-- Загрузка видео -->
-  <label class="file-input">
-    <input type="file" id="videoInput" accept="video/*">
-    <span>Выберите видео</span>
-  </label>
+  <!-- Видео пользователя -->
+  <input type="file" id="videoInput" accept="video/*" class="file">
 
-  <!-- Выбор фона -->
-  <h3>Выберите фон</h3>
+  <!-- КАРУСЕЛЬ -->
+  <div class="carousel" id="bgCarousel">
 
-  <div class="bg-list">
-    <div class="bg-card" onclick="selectBackground('bg.mp4')">
-      <div class="bg-preview">
-        <video src="http://localhost:3000/backgrounds/bg.mp4"
-               muted autoplay loop playsinline></video>
-      </div>
-      <span>Default</span>
+    <div class="slide active" data-bg="bg.mp4">
+      <video src="http://localhost:3000/backgrounds/bg.mp4" muted autoplay loop></video>
+      <span>Classic</span>
     </div>
+
+    <div class="slide" data-bg="gameplay.mp4">
+      <video src="http://localhost:3000/backgrounds/gameplay.mp4" muted autoplay loop></video>
+      <span>Gameplay</span>
+    </div>
+
+    <div class="slide" data-bg="podcast.mp4">
+      <video src="http://localhost:3000/backgrounds/podcast.mp4" muted autoplay loop></video>
+      <span>Podcast</span>
+    </div>
+
   </div>
 
   <!-- Кнопка -->
-  <button id="renderBtn" onclick="renderVideo()">Создать кружок</button>
+  <button id="renderBtn">Создать кружок</button>
 
-  <!-- Статус -->
+  <!-- Loader -->
   <div id="status" class="status hidden">
     <div class="loader"></div>
-    <p>Генерируем видео…</p>
+    <p>Генерируем...</p>
   </div>
 
   <!-- Результат -->
-  <div id="result" class="result hidden">
-    <video id="resultVideo" controls></video>
-    <a id="downloadLink">Скачать</a>
-  </div>
-
+  <video id="resultVideo" class="result hidden" controls></video>
 </div>
 
 <script src="app.js"></script>
