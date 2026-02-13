@@ -13,21 +13,21 @@
 <div class="app">
   <div class="card">
     <h1>Circle Studio</h1>
-    <div class="subtitle">Сделай видео-кружок</div>
+    <div class="subtitle">Сделай видео-кружок за несколько секунд</div>
 
     <input type="file" id="videoInput" class="file" accept="video/*">
-    <button id="renderBtn">Создать</button>
+    <button id="renderBtn">Создать кружок</button>
 
     <div id="result"></div>
   </div>
 </div>
 
-<!-- overlay -->
+<!-- Overlay генерации -->
 <div id="processingOverlay" class="overlay hidden">
   <div class="overlay-box">
     <div class="spinner"></div>
     <div class="overlay-text">Генерируем видео…</div>
-    <div class="overlay-sub">Подожди пару секунд</div>
+    <div class="overlay-sub">Не закрывай страницу</div>
   </div>
 </div>
 
@@ -38,7 +38,10 @@ const result = document.getElementById("result");
 const overlay = document.getElementById("processingOverlay");
 
 btn.onclick = async () => {
-  if (!input.files.length) return alert("Выбери видео");
+  if (!input.files.length) {
+    alert("Выбери видео");
+    return;
+  }
 
   overlay.classList.remove("hidden");
   btn.disabled = true;
@@ -52,27 +55,48 @@ btn.onclick = async () => {
       body: formData
     });
 
-    // Ждём полной загрузки файла
+    // Ждём пока файл реально полностью загрузится
     const buffer = await response.arrayBuffer();
     const blob = new Blob([buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
     const video = document.createElement("video");
     video.className = "circle-video";
+
+    // 👇 Это событие приходит ВСЕГДА когда файл реально готов
+    video.addEventListener("loadedmetadata", () => {
+      showCircle(video);
+      overlay.classList.add("hidden");
+      btn.disabled = false;
+    });
+
+    // если вдруг ошибка загрузки
+    video.addEventListener("error", () => {
+      alert("Ошибка загрузки видео");
+      overlay.classList.add("hidden");
+      btn.disabled = false;
+    });
+
     video.src = url;
     video.controls = true;
     video.autoplay = true;
     video.loop = true;
+    video.playsInline = true;
 
-    // Показываем результат только когда видео готово
-    video.oncanplay = () => {
-      showCircle(video);
-      overlay.classList.add("hidden");
-      btn.disabled = false;
-    };
+    video.load();
+
+    // 🛟 fallback если браузер тупит
+    setTimeout(() => {
+      if (video.readyState === 0) {
+        showCircle(video);
+        overlay.classList.add("hidden");
+        btn.disabled = false;
+      }
+    }, 5000);
 
   } catch (e) {
     console.error(e);
+    alert("Ошибка генерации");
     overlay.classList.add("hidden");
     btn.disabled = false;
   }
@@ -80,8 +104,10 @@ btn.onclick = async () => {
 
 function showCircle(videoElement) {
   result.innerHTML = "";
+
   const wrapper = document.createElement("div");
   wrapper.className = "circle-wrapper";
+
   wrapper.appendChild(videoElement);
   result.appendChild(wrapper);
 }
