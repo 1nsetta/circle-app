@@ -1,44 +1,54 @@
 let selectedBg = "bg.mp4";
 
-function selectBackground(name) {
-  selectedBg = name;
+const slides = document.querySelectorAll(".slide");
+const carousel = document.getElementById("bgCarousel");
 
-  document.querySelectorAll(".bg-card").forEach(c => c.style.outline = "none");
-  event.currentTarget.style.outline = "3px solid #00c6ff";
-}
+/* Определяем активный слайд при свайпе */
 
-async function renderVideo() {
-  const file = document.getElementById("videoInput").files[0];
-  if (!file) {
-    alert("Выбери видео");
-    return;
+carousel.addEventListener("scroll", () => {
+  let closest = null;
+  let closestOffset = Infinity;
+
+  slides.forEach(slide => {
+    const rect = slide.getBoundingClientRect();
+    const offset = Math.abs(rect.left + rect.width/2 - window.innerWidth/2);
+
+    if (offset < closestOffset) {
+      closestOffset = offset;
+      closest = slide;
+    }
+  });
+
+  slides.forEach(s => s.classList.remove("active"));
+  if (closest) {
+    closest.classList.add("active");
+    selectedBg = closest.dataset.bg;
   }
+});
+
+/* РЕНДЕР */
+
+document.getElementById("renderBtn").onclick = async () => {
+  const file = document.getElementById("videoInput").files[0];
+  if (!file) return alert("Выбери видео");
 
   document.getElementById("status").classList.remove("hidden");
-  document.getElementById("result").classList.add("hidden");
 
   const formData = new FormData();
   formData.append("video", file);
-  formData.append("background", selectedBg);
+  formData.append("bgName", selectedBg);
 
-  try {
-    const response = await fetch("http://localhost:3000/render", {
-      method: "POST",
-      body: formData
-    });
+  const response = await fetch("http://localhost:3000/render", {
+    method: "POST",
+    body: formData
+  });
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
 
-    document.getElementById("resultVideo").src = url;
-    document.getElementById("downloadLink").href = url;
-    document.getElementById("downloadLink").download = "circle.mp4";
+  const video = document.getElementById("resultVideo");
+  video.src = url;
+  video.classList.remove("hidden");
 
-    document.getElementById("status").classList.add("hidden");
-    document.getElementById("result").classList.remove("hidden");
-
-  } catch (e) {
-    document.getElementById("status").classList.add("hidden");
-    alert("Ошибка генерации");
-  }
-}
+  document.getElementById("status").classList.add("hidden");
+};
